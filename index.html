@@ -119,7 +119,6 @@
               <div role="progressbar" style="width: 0%" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100" class="progress-bar bg-danger progress-bar-striped" id="progressTotalSupply"></div>
             </div>
 
-
             <!--<div class="progress">-->
               <!--<div style="width: 0%;" class="progress-bar progress-bar-primary"></div>-->
             <!--</div>-->
@@ -289,7 +288,7 @@
                     <thead>
                     <tr>
                       <th style="width:30%;">玩家</th>
-                      <th class="number">买入数量</th>
+                      <th class="number">数量</th>
                       <th class="number">价格(NAS)</th>
                       <th style="width:30%;">时间</th>
                       <th style="width:5%;" class="actions"></th>
@@ -312,7 +311,7 @@
                     <thead>
                     <tr>
                       <th style="width:30%;">玩家</th>
-                      <th class="number">卖出数量</th>
+                      <th class="number">数量</th>
                       <th class="number">价格(NAS)</th>
                       <th style="width:30%;">时间</th>
                       <th style="width:5%;" class="actions"></th>
@@ -525,10 +524,11 @@
                 neb.api.getTransactionReceipt({hash: hash}).then(function(receipt){
                   if (receipt.status == 0) //not in pending
                   {
+                    console.log(receipt);
                     clearInterval(task);
                     $.gritter.add({
                       title: "新消息",
-                      text: "交易失败, 请将GasLimit手动设置为2M wei",
+                      text: "交易失败, 请将GasLimit手动设置为2M wei 或者进行小额度的买卖, 错误提示: " + receipt.execute_error,
                       time: "",
                       class_name: "danger clean"
                     });
@@ -619,6 +619,7 @@
             if(retryQueryTime <= 0){
               clearInterval(intervalQuery);
               if(resp.code == 1){
+                clearInterval(intervalQuery);
                 $.gritter.add({
                   title: "新消息",
                   text: "查询交易状态超时, 请您手动查询交易!",
@@ -665,7 +666,7 @@
 
         $.gritter.add({
           title: "新消息",
-          text: "正在调用钱包, 请将GasLimit手动设置为2M wei并确认操作!",
+          text: "正在调用钱包, 请将GasLimit手动设置为2M wei 或者进行小额度的买卖并确认操作!",
           time: "",
           class_name: "primary clean"
         });
@@ -700,7 +701,7 @@
                       } else if(resp.status == 0){
                         $.gritter.add({
                           title: "新消息",
-                          text: "交易失败, 请将GasLimit手动设置为2M wei",
+                          text: "交易失败, 请将GasLimit手动设置为2M wei 或者进行小额度的买卖, 错误提示: " + resp.execute_error,
                           time: "",
                           class_name: "danger clean"
                         });
@@ -765,7 +766,7 @@
                   } else if(resp.status == 0){
                     $.gritter.add({
                       title: "新消息",
-                      text: "交易失败, 请将GasLimit手动设置为2M wei",
+                      text: "交易失败, 请将GasLimit手动设置为2M wei 或者进行小额度的买卖, 错误提示: " + resp.execute_error,
                       time: "",
                       class_name: "danger clean"
                     });
@@ -846,212 +847,43 @@
         });
       }
 
-      function getBuyVolumeByIndex(index, callback){
-        var fun = 'getBuyOrder';
-        var args = [];   
-        args.push(index);
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              result = JSON.parse(result);
-              buyOrder = buyOrder.concat(result);
-              for(var r in result){
-                volume += result[r].amount;
-                buyPriceTrend.push([result[r].orderId, parseInt(result[r].price.toFixed(8) * 1000000)]);
-              }
-              callback();
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
-      }
 
       function getBuyVolume(callback){
-        var fun = 'buyOrderIndex';
-        var args = [];
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              var index = JSON.parse(result);
-              var i = index;
-              // var f = function(){
-              //   i ++;
-              //   if(i < index){
-              //     getBuyVolumeByIndex(i, f);
-              //   } else {
-              //     callback()
-              //   }
-              // };
-              getBuyVolumeByIndex(i, callback);
-
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
-      }
-
-      function getSellVolumeByIndex(index, callback){
-        var fun = 'getSellOrder';
-        var args = [];
-        args.push(index);
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              result = JSON.parse(result);
-              for(var r in result){
-                volume += result[r].amount;
-              }
-              sellOrder = sellOrder.concat(result);
-              callback();
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
+        $.get('http://d.nasgo.top:100/cg/buy-list', function(result){
+          buyOrder = buyOrder.concat(result);
+          for(var r in result){
+            volume += result[r].amount;
+            buyPriceTrend.push([result[r].orderId, parseInt(result[r].price.toFixed(8) * 1000000)]);
+          }
+          callback()
+        })
       }
 
       function getSellVolume(callback){
-        var fun = 'sellOrderIndex';
-        var args = [];
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              var index = JSON.parse(result);
-              var i = index;
-              // var f = function(){
-              //   i ++;
-              //   if(i <= index){
-              //     getSellVolumeByIndex(i, f);
-              //   } else {
-              //     callback();
-              //   }
-              // };
-              getSellVolumeByIndex(i, callback);
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
+        $.get('http://d.nasgo.top:100/cg/sell-list', function(result){
+          sellOrder = sellOrder.concat(result);
+          for(var r in result){
+            volume += result[r].amount;
+            sellPriceTrend.push([result[r].orderId, parseInt(result[r].price.toFixed(8) * 1000000)]);
+          }
+          callback()
+        })
       }
-
-      function getBurnVolumeByIndex(index, callback){
-        var fun = 'getBurnOrder';
-        var args = [];
-        args.push(index);
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              result = JSON.parse(result);
-              for(var r in result){
-                volume += result[r].amount;
-                buyPriceTrend.push([result[r].orderId, parseInt(result[r].price.toFixed(8) * 1000000)]);
-              }
-              burnOrder = burnOrder.concat(result);
-              callback();
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
-      }
-
       function getBurnVolume(callback){
-        var fun = 'burnOrderIndex';
-        var args = [];
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-
-              var index = JSON.parse(result);
-              var i = index;
-              // var f = function(){
-              //   i ++;
-              //   if(i <= index){
-              //     getBurnVolumeByIndex(i, f);
-              //   } else {
-              //     callback();
-              //   }
-              // };
-//              getBurnVolumeByIndex(i, callback);
-              callback();
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
+        $.get('http://d.nasgo.top:100/cg/burn-list', function(result){
+          burnOrder = burnOrder.concat(result);
+          for(var r in result){
+            volume += result[r].amount;
+            burnPriceTrend.push([result[r].orderId, parseInt(result[r].price.toFixed(8) * 1000000)]);
+          }
+          callback()
+        })
       }
 
       function getBalance(callback){
-        var fun = 'balance';
-        var args = [];
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              var balance = JSON.parse(result);
-              callback(balance);
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
+        $.get('http://d.nasgo.top:100/cg/balance', function(result){
+          callback(result)
+        })
       }
 
       function getPrice(){
@@ -1125,26 +957,9 @@
       }
 
       function getInsureBalance(callback){
-        var fun = 'insureBalance';
-        var args = [];
-        innerCall(fun, args, 0, function(params){
-          neb.api.call(params.from.getAddressString(), params.to, params.value, 0, params.gasPrice, params.gasLimit, params.contract).then(function (resp) {
-            var result = resp.result;
-            if(result === 'null' || result === '""'){
-              return;
-            }
-            try{
-              var balance = JSON.parse(result);
-              callback(balance);
-            }catch (err){
-              //result is the error message
-              console.log("error:" + err.message)
-            }
-          }).catch(function (err) {
-            console.log("error:" + err.message)
-          });
-
-        });
+        $.get('http://d.nasgo.top:100/cg/insure-balance', function(result){
+          callback(result)
+        })
       }
 
       function getContractTokenBalance(){
@@ -1416,7 +1231,7 @@
           if(value > 2){
             $.gritter.add({
               title: "新消息",
-              text: "确认交易时请将GasLimit手动设置为2M wei",
+              text: "确认交易时请将GasLimit手动设置为2M wei 或者进行小额度的买卖",
               time: "",
               class_name: "warning clean"
             });
@@ -1474,7 +1289,7 @@
           if(sellAmount > 100){
             $.gritter.add({
               title: "新消息",
-              text: "确认交易时请将GasLimit手动设置为2M wei",
+              text: "确认交易时请将GasLimit手动设置为2M wei 或者进行小额度的买卖",
               time: "",
               class_name: "warning clean"
             });
@@ -1915,7 +1730,7 @@
                       });
 
                       if(interval == null){
-                        interval = setInterval(refreshData, 25000);
+                        interval = setInterval(refreshData, 15000);
                       }
                     })
                   });
@@ -2029,6 +1844,12 @@
           window.location = 'en/index.html'
         }
         App.init();
+        $.gritter.add({
+          title: "新消息",
+          text: "参与头号玩家，有望分享20%星云月冠军奖金和丰厚糖果，头号玩家的刺激体验和丰厚奖励在等你！",
+          time: "",
+          class_name: "clean"
+        });
       });
     </script>
 
